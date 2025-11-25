@@ -1,4 +1,4 @@
-**Comparación operadores cruza AG - optimización continua**
+## Comparación operadores cruza AG - optimización continua
 
 **Martínez Martínez Geovani — 320141384**  
 
