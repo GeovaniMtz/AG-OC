@@ -1,7 +1,6 @@
-# Tarea 6 — Evolución Diferencial
+**Comparación operadores cruza AG - optimización continua**
 
 **Martínez Martínez Geovani — 320141384**  
-**Linares Flores Oscar Daniel — 320208591**
 
 ---
 
