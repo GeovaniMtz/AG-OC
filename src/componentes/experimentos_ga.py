@@ -88,10 +88,10 @@ if __name__ == "__main__":
     # Ajusta estos parámetros como quieras para tus experimentos
     correr_experimentos(
         nombre_archivo="resultados_ga_sphere_rastrigin.csv",
-        funciones=["sphere", "rastrigin"],   # puedes añadir más
+        funciones=["sphere", "rastrigin", "rosenbrock"], # se pueden agregar más
         cruzas=["un_punto", "uniforme", "blx", "sbx"],
-        dim=30,
+        dim=10,
         tam_pob=50,
-        generaciones=1000,
+        generaciones=500,
         repeticiones=20,
     )
