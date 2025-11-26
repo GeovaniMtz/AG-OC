@@ -12,7 +12,7 @@ Se exploran **3 variantes DE** (rand/1/bin, best/1/bin, rand/2/bin) con diferent
 
 ## Estructura del repositorio
 ```
-Syrion6/
+AG-OC/
 ├─ output/
 │  └─ experimentos_de/
 │     ├─ DE_rand_1_bin_F0.5_CR0.1/
