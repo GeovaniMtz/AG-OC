@@ -1,5 +1,8 @@
 import random
 import time
+import csv
+import sys
+
 from typing import Callable, Dict, Tuple, List
 
 from funciones import sphere, ackley, griewank, rastrigin, rosenbrock
@@ -213,18 +216,188 @@ def ejecutar_ga_real(
     }
 
 # =========================================
-# 4. Ejemplo de uso rápido
+# 4. Experimentos múltiples + CSV
+# =========================================
+
+def correr_experimentos(
+    nombre_archivo: str = "resultados_ga.csv",
+    funciones: List[str] = None,
+    cruzas: List[str] = None,
+    dim: int = 10,
+    tam_pob: int = 50,
+    generaciones: int = 500,
+    repeticiones: int = 20,
+    modo_semillas: str = "independientes",  # "independientes" o "bloques"
+    base_semilla: int | None = None,
+):
+    """
+    Corre varias veces el AG para distintas funciones y operadores de cruza,
+    y guarda los resultados (incluyendo tiempo) en un CSV.
+
+    modo_semillas = "independientes":
+        - Cada combinación función×cruza×rep tiene una semilla distinta.
+    modo_semillas = "bloques":
+        - Para cada repetición se usa la misma semilla en TODAS las
+          funciones y cruzas. La semilla de la rep es base_semilla + rep.
+    """
+    if funciones is None:
+        funciones = ["sphere", "rastrigin", "rosenbrock"]
+
+    if cruzas is None:
+        cruzas = ["un_punto", "uniforme", "blx", "sbx"]
+
+    with open(nombre_archivo, mode="w", newline="") as f:
+        writer = csv.writer(f)
+
+        # Encabezados del CSV
+        writer.writerow([
+            "funcion",
+            "tipo_cruza",
+            "dim",
+            "tam_pob",
+            "generaciones",
+            "repeticion",
+            "semilla",
+            "mejor_final",
+            "peor_final",
+            "promedio_final",
+            "tiempo_total_seg",
+        ])
+
+        if modo_semillas == "independientes":
+            # Comportamiento que tenías ANTES: todas las semillas distintas
+            rep_global = 0
+            for nombre_func in funciones:
+                for tipo_cruza in cruzas:
+                    for rep in range(repeticiones):
+                        semilla = 1000 * rep_global + 123
+                        rep_global += 1
+
+                        print(f"[INFO] Función={nombre_func}, cruza={tipo_cruza}, "
+                              f"rep={rep+1}/{repeticiones}, semilla={semilla}")
+
+                        resultado = ejecutar_ga_real(
+                            nombre_func=nombre_func,
+                            dim=dim,
+                            tam_pob=tam_pob,
+                            generaciones=generaciones,
+                            pc=0.9,
+                            tipo_cruza=tipo_cruza,
+                            porcentaje_reemplazo=1.0,
+                            elitismo=1,
+                            semilla=semilla,
+                            alpha_blx=0.5,
+                            eta_c_sbx=10.0,
+                            amplitud_mut=0.1,
+                        )
+
+                        writer.writerow([
+                            resultado["nombre_func"],
+                            resultado["tipo_cruza"],
+                            resultado["dim"],
+                            resultado["tam_pob"],
+                            resultado["generaciones"],
+                            rep,
+                            resultado["semilla"],
+                            resultado["mejor_final"],
+                            resultado["peor_final"],
+                            resultado["promedio_final"],
+                            resultado["tiempo_total"],
+                        ])
+
+        elif modo_semillas == "bloques":
+            # Modo "bonito": misma semilla para TODAS las funciones y cruzas en una repetición
+            if base_semilla is None:
+                base_semilla = 42  # por si no se pasa nada
+
+            for rep in range(repeticiones):
+                semilla = base_semilla + rep  # rep 0 -> base_semilla, rep 1 -> base_semilla+1, etc.
+
+                for nombre_func in funciones:
+                    for tipo_cruza in cruzas:
+                        print(f"[INFO] Función={nombre_func}, cruza={tipo_cruza}, "
+                              f"rep={rep+1}/{repeticiones}, semilla={semilla}")
+
+                        resultado = ejecutar_ga_real(
+                            nombre_func=nombre_func,
+                            dim=dim,
+                            tam_pob=tam_pob,
+                            generaciones=generaciones,
+                            pc=0.9,
+                            tipo_cruza=tipo_cruza,
+                            porcentaje_reemplazo=1.0,
+                            elitismo=1,
+                            semilla=semilla,
+                            alpha_blx=0.5,
+                            eta_c_sbx=10.0,
+                            amplitud_mut=0.1,
+                        )
+
+                        writer.writerow([
+                            resultado["nombre_func"],
+                            resultado["tipo_cruza"],
+                            resultado["dim"],
+                            resultado["tam_pob"],
+                            resultado["generaciones"],
+                            rep,
+                            resultado["semilla"],
+                            resultado["mejor_final"],
+                            resultado["peor_final"],
+                            resultado["promedio_final"],
+                            resultado["tiempo_total"],
+                        ])
+        else:
+            raise ValueError(f"modo_semillas no reconocido: {modo_semillas}")
+
+    print(f"\n[OK] Resultados guardados en: {nombre_archivo}")
+
+
+
+# =========================================
+# 5. Punto de entrada
 # =========================================
 
 if __name__ == "__main__":
-    # Ejemplo: una sola corrida en Sphere con BLX
-    resultado = ejecutar_ga_real(
+    # Parseo MUY simple de argumentos:
+    #   python main_ga.py           -> modo_semillas = "independientes"
+    #   python main_ga.py -s 42     -> modo_semillas = "bloques", base_semilla = 42
+    #   python main_ga.py --seed 10 -> igual que -s 10
+
+    args = sys.argv[1:]
+    modo_semillas = "independientes"
+    base_semilla = None
+
+    if len(args) >= 2 and args[0] in ("-s", "--seed"):
+        try:
+            base_semilla = int(args[1])
+            modo_semillas = "bloques"
+            print(f"[INFO] Usando modo de semillas 'bloques' con base = {base_semilla}")
+        except ValueError:
+            print(f"[WARN] Semilla base inválida '{args[1]}', usando modo 'independientes'.")
+
+    # --- MODO EXPERIMENTOS (muchas corridas + CSV) ---
+    correr_experimentos(
+        nombre_archivo="resultados_ga_sphere_rastrigin_rosenbrock.csv",
+        funciones=["sphere", "rastrigin", "rosenbrock"],
+        cruzas=["un_punto", "uniforme", "blx", "sbx"],
+        dim=10,
+        tam_pob=100,
+        generaciones=1000,
+        repeticiones=30,
+        modo_semillas=modo_semillas,
+        base_semilla=base_semilla,
+    )
+
+    # --- MODO PRUEBA RÁPIDA (una sola corrida) ---
+    # Descomenta esto si quieres probar solo una corrida:
+    """
+    res = ejecutar_ga_real(
         nombre_func="sphere",
         dim=5,
         tam_pob=30,
         generaciones=200,
         pc=0.9,
-        tipo_cruza="blx",       # "un_punto", "uniforme", "blx", "sbx"
+        tipo_cruza="blx",
         porcentaje_reemplazo=1.0,
         elitismo=1,
         semilla=123,
@@ -232,8 +405,8 @@ if __name__ == "__main__":
         eta_c_sbx=10.0,
         amplitud_mut=0.1,
     )
-
-    print(f"Función: {resultado['nombre_func']}")
-    print(f"Tipo de cruza: {resultado['tipo_cruza']}")
-    print("Mejor valor final:", resultado["mejor_final"])
-    print("Tiempo total (s):", resultado["tiempo_total"])
+    print(f"Función: {res['nombre_func']}")
+    print(f"Tipo de cruza: {res['tipo_cruza']}")
+    print("Mejor valor final:", res["mejor_final"])
+    print("Tiempo total (s):", res["tiempo_total"])
+    """
