@@ -7,6 +7,7 @@ from typing import Callable, Dict, Tuple, List
 
 from funciones import sphere, ackley, griewank, rastrigin, rosenbrock
 from seleccion_ruleta import transformar_aptitud, seleccion_ruleta
+from calcular_diversidad import calcular_diversidad
 from cruza_un_punto import cruza_un_punto
 from cruza_uniforme import cruza_uniforme
 from cruza_blx import cruza_blx
@@ -77,9 +78,11 @@ def crear_hijos_reales(
     elif tipo == "uniforme":
         c1, c2 = cruza_uniforme(p1, p2, prob_cruza=pc, rng=rng)
     elif tipo == "blx":
-        c1, c2 = cruza_blx(p1, p2, prob_cruza=pc, alpha=alpha_blx, rng=rng)
+        c1, c2 = cruza_blx(p1, p2, prob_cruza=pc, alpha=alpha_blx, rng=rng, 
+                           limite_inf=a, limite_sup=b)
     elif tipo == "sbx":
-        c1, c2 = cruza_sbx(p1, p2, prob_cruza=pc, eta_c=eta_c_sbx, rng=rng)
+        c1, c2 = cruza_sbx(p1, p2, prob_cruza=pc, eta_c=eta_c_sbx, rng=rng, 
+                           limite_inf=a, limite_sup=b)
     else:
         raise ValueError(f"tipo_cruza no soportado: {tipo_cruza}")
 
@@ -134,6 +137,7 @@ def ejecutar_ga_real(
     # Curvas de evolución
     curva_mejor: List[float] = []
     curva_promedio: List[float] = []
+    curva_diversidad: List[float] = []
 
     t0 = time.perf_counter()
 
@@ -181,8 +185,11 @@ def ejecutar_ga_real(
         # --- Registrar métricas por generación ---
         mejor = min(costos)
         promedio = sum(costos) / len(costos)
+        diversidad = calcular_diversidad(poblacion)
+
         curva_mejor.append(mejor)
         curva_promedio.append(promedio)
+        curva_diversidad.append(diversidad)
 
     t1 = time.perf_counter()
     tiempo_total = t1 - t0
@@ -210,6 +217,7 @@ def ejecutar_ga_real(
         "promedio_final": promedio_final,
         "curva_mejor": curva_mejor,
         "curva_promedio": curva_promedio,
+        "curva_diversidad": curva_diversidad,
         "poblacion_final": poblacion,
         "costos_finales": costos,
         "tiempo_total": tiempo_total,
@@ -265,6 +273,7 @@ def correr_experimentos(
             "peor_final",
             "promedio_final",
             "tiempo_total_seg",
+            "diversidad",
         ])
 
         # Encabezados del CSV de CURVAS
@@ -279,6 +288,8 @@ def correr_experimentos(
             "generacion",
             "mejor_generacion",
             "promedio_generacion",
+            "diversidad"
+
         ])
 
         # =========================
@@ -328,8 +339,10 @@ def correr_experimentos(
                         # ------- CURVAS ---------
                         curva_mejor = resultado["curva_mejor"]
                         curva_prom = resultado["curva_promedio"]
-                        for gen, (mejor_g, prom_g) in enumerate(
-                            zip(curva_mejor, curva_prom)
+                        curva_div = resultado["curva_diversidad"]
+
+                        for gen, (mejor_g, prom_g, div_g) in enumerate(
+                            zip(curva_mejor, curva_prom, curva_div)
                         ):
                             writer_curv.writerow([
                                 resultado["nombre_func"],
@@ -342,6 +355,7 @@ def correr_experimentos(
                                 gen,
                                 mejor_g,
                                 prom_g,
+                                div_g,
                             ])
 
         # =====================
@@ -375,6 +389,9 @@ def correr_experimentos(
                         )
 
                         # ------- RESUMEN --------
+
+                        diversidad_final = resultado["curva_diversidad"][-1]
+
                         writer_res.writerow([
                             resultado["nombre_func"],
                             resultado["tipo_cruza"],
@@ -387,13 +404,16 @@ def correr_experimentos(
                             resultado["peor_final"],
                             resultado["promedio_final"],
                             resultado["tiempo_total"],
+                            diversidad_final,
                         ])
 
                         # ------- CURVAS ---------
                         curva_mejor = resultado["curva_mejor"]
                         curva_prom = resultado["curva_promedio"]
-                        for gen, (mejor_g, prom_g) in enumerate(
-                            zip(curva_mejor, curva_prom)
+                        curva_diversidad = resultado["curva_diversidad"]
+                        
+                        for gen, (mejor_g, prom_g, div_g) in enumerate(
+                            zip(curva_mejor, curva_prom, curva_diversidad)
                         ):
                             writer_curv.writerow([
                                 resultado["nombre_func"],
@@ -406,6 +426,7 @@ def correr_experimentos(
                                 gen,
                                 mejor_g,
                                 prom_g,
+                                div_g,
                             ])
         else:
             raise ValueError(f"modo_semillas no reconocido: {modo_semillas}")
