@@ -232,25 +232,28 @@ def correr_experimentos(
 ):
     """
     Corre varias veces el AG para distintas funciones y operadores de cruza,
-    y guarda los resultados (incluyendo tiempo) en un CSV.
-
-    modo_semillas = "independientes":
-        - Cada combinación función×cruza×rep tiene una semilla distinta.
-    modo_semillas = "bloques":
-        - Para cada repetición se usa la misma semilla en TODAS las
-          funciones y cruzas. La semilla de la rep es base_semilla + rep.
+    y guarda:
+      - un CSV de resumen (una fila por corrida)
+      - un CSV de curvas (una fila por generación)
     """
+
     if funciones is None:
         funciones = ["sphere", "rastrigin", "rosenbrock"]
 
     if cruzas is None:
         cruzas = ["un_punto", "uniforme", "blx", "sbx"]
 
-    with open(nombre_archivo, mode="w", newline="") as f:
-        writer = csv.writer(f)
+    # Archivo principal (resumen) y archivo de curvas
+    nombre_curvas = nombre_archivo.replace(".csv", "_curvas.csv")
 
-        # Encabezados del CSV
-        writer.writerow([
+    with open(nombre_archivo, mode="w", newline="") as f_res, \
+         open(nombre_curvas, mode="w", newline="") as f_curv:
+
+        writer_res = csv.writer(f_res)
+        writer_curv = csv.writer(f_curv)
+
+        # Encabezados del CSV de RESUMEN
+        writer_res.writerow([
             "funcion",
             "tipo_cruza",
             "dim",
@@ -264,8 +267,24 @@ def correr_experimentos(
             "tiempo_total_seg",
         ])
 
+        # Encabezados del CSV de CURVAS
+        writer_curv.writerow([
+            "funcion",
+            "tipo_cruza",
+            "dim",
+            "tam_pob",
+            "generaciones",
+            "repeticion",
+            "semilla",
+            "generacion",
+            "mejor_generacion",
+            "promedio_generacion",
+        ])
+
+        # =========================
+        #  MODO SEMILLAS INDEPENDES
+        # =========================
         if modo_semillas == "independientes":
-            # Comportamiento que tenías ANTES: todas las semillas distintas
             rep_global = 0
             for nombre_func in funciones:
                 for tipo_cruza in cruzas:
@@ -291,7 +310,8 @@ def correr_experimentos(
                             amplitud_mut=0.1,
                         )
 
-                        writer.writerow([
+                        # ------- RESUMEN --------
+                        writer_res.writerow([
                             resultado["nombre_func"],
                             resultado["tipo_cruza"],
                             resultado["dim"],
@@ -305,13 +325,34 @@ def correr_experimentos(
                             resultado["tiempo_total"],
                         ])
 
+                        # ------- CURVAS ---------
+                        curva_mejor = resultado["curva_mejor"]
+                        curva_prom = resultado["curva_promedio"]
+                        for gen, (mejor_g, prom_g) in enumerate(
+                            zip(curva_mejor, curva_prom)
+                        ):
+                            writer_curv.writerow([
+                                resultado["nombre_func"],
+                                resultado["tipo_cruza"],
+                                resultado["dim"],
+                                resultado["tam_pob"],
+                                resultado["generaciones"],
+                                rep,
+                                resultado["semilla"],
+                                gen,
+                                mejor_g,
+                                prom_g,
+                            ])
+
+        # =====================
+        #  MODO SEMILLAS BLOQUE
+        # =====================
         elif modo_semillas == "bloques":
-            # Modo "bonito": misma semilla para TODAS las funciones y cruzas en una repetición
             if base_semilla is None:
-                base_semilla = 42  # por si no se pasa nada
+                base_semilla = 42
 
             for rep in range(repeticiones):
-                semilla = base_semilla + rep  # rep 0 -> base_semilla, rep 1 -> base_semilla+1, etc.
+                semilla = base_semilla + rep
 
                 for nombre_func in funciones:
                     for tipo_cruza in cruzas:
@@ -333,7 +374,8 @@ def correr_experimentos(
                             amplitud_mut=0.1,
                         )
 
-                        writer.writerow([
+                        # ------- RESUMEN --------
+                        writer_res.writerow([
                             resultado["nombre_func"],
                             resultado["tipo_cruza"],
                             resultado["dim"],
@@ -346,10 +388,30 @@ def correr_experimentos(
                             resultado["promedio_final"],
                             resultado["tiempo_total"],
                         ])
+
+                        # ------- CURVAS ---------
+                        curva_mejor = resultado["curva_mejor"]
+                        curva_prom = resultado["curva_promedio"]
+                        for gen, (mejor_g, prom_g) in enumerate(
+                            zip(curva_mejor, curva_prom)
+                        ):
+                            writer_curv.writerow([
+                                resultado["nombre_func"],
+                                resultado["tipo_cruza"],
+                                resultado["dim"],
+                                resultado["tam_pob"],
+                                resultado["generaciones"],
+                                rep,
+                                resultado["semilla"],
+                                gen,
+                                mejor_g,
+                                prom_g,
+                            ])
         else:
             raise ValueError(f"modo_semillas no reconocido: {modo_semillas}")
 
-    print(f"\n[OK] Resultados guardados en: {nombre_archivo}")
+    print(f"\n[OK] Resultados RESUMEN en: {nombre_archivo}")
+    print(f"[OK] Curvas por generación en: {nombre_curvas}")
 
 
 
@@ -388,25 +450,3 @@ if __name__ == "__main__":
         base_semilla=base_semilla,
     )
 
-    # --- MODO PRUEBA RÁPIDA (una sola corrida) ---
-    # Descomenta esto si quieres probar solo una corrida:
-    """
-    res = ejecutar_ga_real(
-        nombre_func="sphere",
-        dim=5,
-        tam_pob=30,
-        generaciones=200,
-        pc=0.9,
-        tipo_cruza="blx",
-        porcentaje_reemplazo=1.0,
-        elitismo=1,
-        semilla=123,
-        alpha_blx=0.5,
-        eta_c_sbx=10.0,
-        amplitud_mut=0.1,
-    )
-    print(f"Función: {res['nombre_func']}")
-    print(f"Tipo de cruza: {res['tipo_cruza']}")
-    print("Mejor valor final:", res["mejor_final"])
-    print("Tiempo total (s):", res["tiempo_total"])
-    """
