@@ -10,15 +10,28 @@ def cruza_sbx(
     limite_inf: Optional[float] = None,
     limite_sup: Optional[float] = None,
 ) -> Tuple[List[float], List[float]]:
-    """
-    Cruza SBX (Simulated Binary Crossover) para representación real.
-    Implementación estándar (sin truco de prob. extra por gen).
 
-    - padre1, padre2: vectores de reales (misma longitud).
-    - prob_cruza: probabilidad de aplicar la cruza SBX al individuo.
-    - eta_c: índice de distribución.
-    - limite_inf, limite_sup: cotas opcionales para recorte de los hijos.
     """
+    Implementa el operador SBX (Simulated Binary Crossover) para codificación real.
+
+    Simula la distribución de probabilidad de la cruza de un punto en representaciones
+    binarias, adaptada a espacios continuos. Genera descendencia cercana a los padres o
+    alejada de ellos según el índice de distribución (eta_c).
+
+    Args:
+        padre1 (List[float]): Vector de variables de decisión del primer progenitor.
+        padre2 (List[float]): Vector de variables de decisión del segundo progenitor.
+        prob_cruza (float): Probabilidad de aplicar el operador [0, 1].
+        eta_c (float): Índice de distribución. Valores altos generan hijos semejantes
+                       a los padres (explotación); valores bajos permiten mayor diversidad (exploración).
+        rng (Random): Generador de números aleatorios.
+        limite_inf (Optional[float]): Cota inferior para restringir el espacio de búsqueda.
+        limite_sup (Optional[float]): Cota superior para restringir el espacio de búsqueda.
+
+    Returns:
+        Tuple[List[float], List[float]]: Tupla con los dos descendientes generados.
+    """
+
     if rng is None:
         raise ValueError("Se debe dar un generador 'rng'")
 
@@ -26,7 +39,7 @@ def cruza_sbx(
     if len(padre2) != n:
         raise ValueError("Los padres deben tener la misma longitud.")
 
-    # Si no hay cruza: copiar padres tal cual
+    # Copiar padres si no se cumple la probabilidad de cruza
     if rng.random() >= prob_cruza:
         return padre1.copy(), padre2.copy()
 
@@ -36,11 +49,11 @@ def cruza_sbx(
     eps = 1e-14
 
     for x1, x2 in zip(padre1, padre2):
-        # Si son prácticamente iguales, solo copiar
+        # Manejo de genes idénticos o numéricamente muy cercanos para evitar inestabilidad
         if abs(x1 - x2) <= eps:
             c1, c2 = x1, x2
         else:
-            # Asegurar x1 <= x2
+            # Ordenamiento de variables para el cálculo (x1 < x2)
             if x1 > x2:
                 x1, x2 = x2, x1
 
@@ -53,7 +66,7 @@ def cruza_sbx(
             c1 = 0.5 * ((x1 + x2) - beta_q * (x2 - x1))
             c2 = 0.5 * ((x1 + x2) + beta_q * (x2 - x1))
 
-        # Reparación opcional a [limite_inf, limite_sup]
+        # Restricción de límites (clipping) para asegurar factibilidad
         if limite_inf is not None and limite_sup is not None:
             c1 = max(limite_inf, min(c1, limite_sup))
             c2 = max(limite_inf, min(c2, limite_sup))
@@ -62,3 +75,4 @@ def cruza_sbx(
         hijo2.append(c2)
 
     return hijo1, hijo2
+    

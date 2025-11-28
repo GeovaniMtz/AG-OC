@@ -3,63 +3,50 @@ from typing import List
 
 def calcular_diversidad(poblacion: List[List[float]]) -> float:
     """
-    Calcula la diversidad de una población usando desviación estándar promediada.
-    
-    Diversidad = promedio de las desviaciones estándar de cada dimensión
-    
-    Interpretación:
-    - Diversidad ALTA (p. ej. 2.0): Población muy esparcida, buena exploración
-    - Diversidad MEDIA (p. ej. 0.5): Población moderadamente diversa
-    - Diversidad BAJA (p. ej. 0.01): Población convergida, poca exploración
-    
+    Calcula la diversidad fenotípica de la población utilizando la desviación
+    estándar promedio por dimensión.
+
     Args:
-        poblacion: Lista de individuos, cada uno es una lista de reales
-    
+        poblacion (List[List[float]]): Matriz de individuos (población actual).
+
     Returns:
-        Diversidad promedio (desviación estándar promediada entre dimensiones)
+        float: Promedio de las desviaciones estándar de cada variable de decisión.
+               Valores cercanos a 0 indican convergencia de la población.
     """
-    if not poblacion or len(poblacion) == 0:
+    if not poblacion:
         return 0.0
     
-    # Convertir población a array numpy para cálculos
     pob_array = np.array(poblacion, dtype=float)
     
-    # pob_array.shape = (num_individuos, num_dimensiones)
-    # axis=0 → calcula std por cada dimensión
+    # Calcular desviación estándar a lo largo de las dimensiones (axis=0)
     desv_std_por_dimension = np.std(pob_array, axis=0)
     
-    # Promediar las desv. estándar de todas las dimensiones
-    diversidad = np.mean(desv_std_por_dimension)
-    
-    return float(diversidad)
+    return float(np.mean(desv_std_por_dimension))
 
-
-# ============================================================
-# ALTERNATIVA: Diversidad basada en distancia pairwise
-# ============================================================
 
 def calcular_diversidad_distancia(poblacion: List[List[float]]) -> float:
     """
-    Calcula diversidad como distancia Euclidiana promedio entre individuos.
+    Calcula la diversidad basada en la distancia Euclidiana promedio entre
+    pares de individuos.
     
-    Más costoso (O(n²)) pero más robusto que std.
-    
+    Nota: Este método tiene complejidad O(N^2), por lo que se recomienda
+    usarlo solo con poblaciones pequeñas o para análisis específicos.
+
     Args:
-        poblacion: Lista de individuos
-    
+        poblacion (List[List[float]]): Lista de individuos.
+
     Returns:
-        Distancia promedio entre pares de individuos
+        float: Distancia promedio entre todos los pares únicos de individuos.
     """
-    if len(poblacion) <= 1:
+    n = len(poblacion)
+    if n <= 1:
         return 0.0
     
     pob_array = np.array(poblacion, dtype=float)
-    n = len(pob_array)
-    
-    # Calcular todas las distancias Euclidianas
     suma_distancias = 0.0
     num_pares = 0
     
+    # Acumular distancias de pares únicos (i, j) donde j > i
     for i in range(n):
         for j in range(i + 1, n):
             distancia = np.linalg.norm(pob_array[i] - pob_array[j])
@@ -69,5 +56,4 @@ def calcular_diversidad_distancia(poblacion: List[List[float]]) -> float:
     if num_pares == 0:
         return 0.0
     
-    diversidad_media = suma_distancias / num_pares
-    return float(diversidad_media)
+    return float(suma_distancias / num_pares)

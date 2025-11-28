@@ -3,13 +3,23 @@ from typing import List, Sequence
 
 def transformar_aptitud(costos: Sequence[float]) -> List[float]:
     """
-    Transforma una lista de costos (minimización) en una lista de aptitudes
-    (maximización) usando la fórmula 1 / (costo + epsilon).
+    Transforma los valores de costo (minimización) en aptitud (maximización)
+    utilizando escalamiento inverso.
+
+    Aplica la transformación f(x) = 1 / (costo(x) + epsilon). Este método genera
+    una alta presión selectiva hacia valores cercanos a cero, amplificando las
+    diferencias entre soluciones muy buenas.
+
+    Args:
+        costos (Sequence[float]): Vector de costos a minimizar.
+
+    Returns:
+        List[float]: Vector de aptitudes normalizadas y positivas.
     """
-    epsilon = 1e-6  # Para evitar división por cero
+    epsilon = 1e-6  # Constante de estabilidad numérica
     aptitudes = []
     for c in costos:
-        # Asegurarnos de que el costo no sea negativo
+        # Corregir valores negativos
         costo_no_negativo = max(0.0, c)
         aptitudes.append(1.0 / (costo_no_negativo + epsilon))
     return aptitudes
@@ -21,10 +31,19 @@ def seleccion_ruleta(
     rng: Random = None
 ) -> List[List[int]]:
     """
-    Selecciona 'k' individuos (padres) de la población usando el método
-    de la ruleta, basado en la lista de 'aptitudes' (maximización).
-    
-    Requiere un generador 'rng' para ser reproducible.
+    Ejecuta el operador de selección proporcional a la aptitud (Roulette Wheel Selection).
+
+    Selecciona k individuos de la población, donde la probabilidad de que un
+    individuo sea elegido es proporcional a su valor de aptitud relativa.
+
+    Args:
+        poblacion (List[List[int]]): Conjunto de individuos candidatos.
+        aptitudes (Sequence[float]): Valores de aptitud correspondientes a la población.
+        k (int): Cantidad de individuos a seleccionar.
+        rng (Random): Generador de números aleatorios.
+
+    Returns:
+        List[List[int]]: Lista de k individuos seleccionados.
     """
     if rng is None:
         raise ValueError("Se debe proveer un generador 'rng'")
@@ -36,18 +55,17 @@ def seleccion_ruleta(
 
     total_aptitud = sum(aptitudes)
     
-    # Si la aptitud total es cero (todos los individuos tienen aptitud 0),
-    # seleccionamos al azar para evitar división por cero.
+    # Caso base, sin aptitud
     if total_aptitud == 0:
-        # Usa rng.choice
+        # Selección uniforme como mecanismo de fallback
         seleccionados = [rng.choice(poblacion) for _ in range(k)]
     else:
-        # Selección ponderada usando las aptitudes
+        # Muestreo estocástico ponderado por aptitud (ruleta)
         seleccionados = rng.choices(
             population=poblacion,
             weights=aptitudes,
             k=k
         )
     
-    # Devolvemos copias para evitar modificar accidentalmente a los seleccionados
+    # Return de copias para evitar modificar la población original
     return [ind.copy() for ind in seleccionados]

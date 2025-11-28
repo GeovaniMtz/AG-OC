@@ -62,41 +62,4 @@ def rosenbrock(x):
     for i in range(n - 1):
         suma += 100 * (x[i+1] - x[i]**2)**2 + (1 - x[i])**2
     return suma
-
-if __name__ == "__main__":
-    # Pruebas de la función Sphere
-    print("--- Función Sphere ---")
-    print("Sphere ([0, 0]):", sphere([0, 0]))
-    print("Sphere ([1, 2, 3]):", sphere([1, 2, 3]))
-    print("Sphere ([0,0,...,0]):", sphere(np.zeros(10)))
-    print("-" * 25)
     
-    # Pruebas de la función Ackley
-    print("\n--- Función Ackley ---")
-    print("Ackley ([0,0]):", ackley([0, 0]))
-    print("Ackley ([1,2,3]):", ackley([1, 2, 3]))
-    print("Ackley ([0,0,0,0,0,0,0,0,0,0]):", ackley(np.zeros(10)))
-    print("-" * 25)
-    
-    # Pruebas de la función Griewank
-    print("\n--- Función Griewank ---")
-    print("Griewank ([0, 0]):", griewank([0, 0]))
-    print("Griewank ([1, 2, 3]):", griewank([1, 2, 3]))
-    print("Griewank ([0,0,...,0]):", griewank(np.zeros(10)))
-    print("-" * 25)
-    
-    # Pruebas de la función Rastrigin
-    print("\n--- Función Rastrigin ---")
-    print("Rastrigin ([0, 0]):", rastrigin([0, 0]))
-    print("Rastrigin ([1, 2, 3]):", rastrigin([1, 2, 3]))
-    print("Rastrigin ([4.5, 4.5]):", rastrigin([4.5, 4.5]))
-    print("Rastrigin ([0,0,...,0]):", rastrigin(np.zeros(10)))
-    print("-" * 25)
-    
-    # Pruebas de la función Rosenbrock
-    print("\n--- Función Rosenbrock ---")
-    print("Rosenbrock([1,1]):", rosenbrock([1, 1]))
-    print("Rosenbrock([0,0]):", rosenbrock([0, 0]))
-    print("Rosenbrock([1,1,1]):", rosenbrock([1, 1, 1]))
-    print("Rosenbrock([0,1,2]):", rosenbrock([0, 1, 2]))
-    print("Rosenbrock(np.ones(10)):", rosenbrock(np.ones(10)))

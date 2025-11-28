@@ -8,12 +8,20 @@ def cruza_uniforme(
     rng: Random = None
 ) -> Tuple[List[float], List[float]]:
     """
-    Cruza uniforme para representación real.
-    - padre1, padre2: vectores de números reales (misma longitud).
-    - prob_cruza: probabilidad de aplicar la cruza.
-    - rng: generador Random para reproducibilidad.
+    Implementa el operador de cruza uniforme para codificación real.
 
-    Si no ocurre la cruza, los hijos son copias de los padres.
+    Genera descendencia explorando un intervalo extendido definido por la distancia
+    entre los padres y el parámetro alpha, permitiendo tanto explotación como
+    exploración.
+
+    Args:
+        padre1 (List[float]): Vector de variables de decisión del primer progenitor.
+        padre2 (List[float]): Vector de variables de decisión del segundo progenitor.
+        prob_cruza (float): Probabilidad de aplicar el operador [0, 1].
+        rng (Random): Generador de números aleatorios para reproducibilidad.
+
+    Returns:
+        Tuple[List[float], List[float]]: Tupla con los dos hijos generados.
     """
     if rng is None:
         raise ValueError("Se debe dar un generador 'rng'")

@@ -16,9 +16,10 @@ from mutacion_real import mutacion_real
 from reemplazo_peores import reemplazo_peores
 
 # =========================================
-# 1. Mapa de funciones de prueba y dominios
+# 1. Configuración de Benchmarks
 # =========================================
 
+# Mapeo de nombres de funciones a sus implementaciones y límites de dominio
 MAPA_FUNCIONES: Dict[str, Tuple[Callable[[List[float]], float], Tuple[float, float]]] = {
     "sphere":     (sphere,     (-5.12,   5.12)),
     "rastrigin":  (rastrigin,  (-5.12,   5.12)),
@@ -28,7 +29,7 @@ MAPA_FUNCIONES: Dict[str, Tuple[Callable[[List[float]], float], Tuple[float, flo
 }
 
 # =========================================
-# 2. Utilidades básicas para el AG en reales
+# 2. Funciones Auxiliares del AG
 # =========================================
 
 def inicializar_poblacion_reales(
@@ -38,7 +39,9 @@ def inicializar_poblacion_reales(
     b: float,
     rng: random.Random
 ) -> List[List[float]]:
-    """Crea una población inicial de vectores reales en [a, b]."""
+    """
+    Genera la población inicial con distribución uniforme dentro de los límites [a, b].
+    """
     poblacion: List[List[float]] = []
     for _ in range(tam_pob):
         ind = [rng.uniform(a, b) for _ in range(dim)]
@@ -50,7 +53,7 @@ def evaluar_poblacion(
     poblacion: List[List[float]],
     f: Callable[[List[float]], float]
 ) -> List[float]:
-    """Evalúa la función objetivo en todos los individuos (MINIMIZACIÓN)."""
+    """Calcula el costo (fitness) de cada individuo. Contexto de minimización."""
     return [f(ind) for ind in poblacion]
 
 
@@ -68,11 +71,16 @@ def crear_hijos_reales(
     amplitud_mut: float = 0.1,
 ) -> Tuple[List[float], List[float]]:
     """
-    Aplica la cruza elegida (un_punto, uniforme, blx, sbx) + mutación real
-    para generar dos hijos a partir de dos padres.
+    Gestiona la reproducción: selecciona el operador de cruza y aplica mutación.
+    
+    Args:
+        tipo_cruza: Identificador del operador ('un_punto', 'uniforme', 'blx', 'sbx').
+        pm_gen: Probabilidad de mutación por gen.
+        amplitud_mut: Intensidad de la mutación real.
     """
     tipo = tipo_cruza.lower()
 
+    # Selección del operador de recombinación
     if tipo == "un_punto":
         c1, c2 = cruza_un_punto(p1, p2, prob_cruza=pc, rng=rng)
     elif tipo == "uniforme":
@@ -84,9 +92,9 @@ def crear_hijos_reales(
         c1, c2 = cruza_sbx(p1, p2, prob_cruza=pc, eta_c=eta_c_sbx, rng=rng, 
                            limite_inf=a, limite_sup=b)
     else:
-        raise ValueError(f"tipo_cruza no soportado: {tipo_cruza}")
+        raise ValueError(f"Operador de cruza no reconocido: {tipo_cruza}")
 
-    # Mutación real gen a gen
+    # Aplicación de mutación gaussiana a nivel de gen
     c1 = mutacion_real(c1, prob_mutacion_gen=pm_gen, a=a, b=b,
                        amplitud=amplitud_mut, rng=rng)
     c2 = mutacion_real(c2, prob_mutacion_gen=pm_gen, a=a, b=b,
@@ -95,7 +103,7 @@ def crear_hijos_reales(
     return c1, c2
 
 # =========================================
-# 3. AG principal (una sola corrida)
+# 3. Motor del Algoritmo Genético
 # =========================================
 
 def ejecutar_ga_real(
@@ -104,7 +112,7 @@ def ejecutar_ga_real(
     tam_pob: int = 50,
     generaciones: int = 1000,
     pc: float = 0.9,
-    tipo_cruza: str = "un_punto",  # "un_punto", "uniforme", "blx", "sbx"
+    tipo_cruza: str = "un_punto",
     porcentaje_reemplazo: float = 1.0,
     elitismo: int = 1,
     semilla: int = 42,
@@ -113,28 +121,25 @@ def ejecutar_ga_real(
     amplitud_mut: float = 0.1,
 ) -> dict:
     """
-    Ejecuta una corrida de AG con representación real para una función de prueba.
-    Devuelve un diccionario con métricas finales, curvas e información de tiempo.
+    Ejecuta una instancia completa del AG. 
+    Retorna métricas de desempeño y series de tiempo de la evolución.
     """
     if nombre_func not in MAPA_FUNCIONES:
-        raise ValueError(f"Función desconocida: {nombre_func}")
+        raise ValueError(f"Benchmark desconocido: {nombre_func}")
 
-    # Generador de números aleatorios
+    # Inicialización de generador determinístico
     rng = random.Random(semilla)
 
-    # Función objetivo y dominio
     f, (a, b) = MAPA_FUNCIONES[nombre_func]
 
-    # Probabilidad de mutación por gen (heurística típica)
+    # Heurística: Probabilidad de mutación inversamente proporcional a la dimensión
     pm_gen = 1.0 / dim
 
-    # Población inicial
+    # Inicialización y evaluación base
     poblacion = inicializar_poblacion_reales(tam_pob, dim, a, b, rng)
-
-    # Costos iniciales
     costos = evaluar_poblacion(poblacion, f)
 
-    # Curvas de evolución
+    # Estructuras para traza histórica
     curva_mejor: List[float] = []
     curva_promedio: List[float] = []
     curva_diversidad: List[float] = []
@@ -142,15 +147,15 @@ def ejecutar_ga_real(
     t0 = time.perf_counter()
 
     for g in range(generaciones):
-        # --- Selección (usa costos -> aptitudes) ---
-        aptitudes = transformar_aptitud(costos)  # convierte minimización a "fitness"
+        # Selección de padres (Aptitud transformada para maximización)
+        aptitudes = transformar_aptitud(costos)
         padres = seleccion_ruleta(poblacion, aptitudes, tam_pob, rng)
 
-        # --- Cruza + mutación: generamos una camada de hijos ---
+        # Ciclo de reproducción
         hijos: List[List[float]] = []
         for i in range(0, tam_pob, 2):
             p1 = padres[i]
-            p2 = padres[(i + 1) % tam_pob]  # por si tam_pob es impar
+            p2 = padres[(i + 1) % tam_pob] # Wrap-around para población impar
 
             h1, h2 = crear_hijos_reales(
                 p1, p2,
@@ -166,13 +171,13 @@ def ejecutar_ga_real(
             hijos.append(h1)
             hijos.append(h2)
 
-        # Ajustar tamaño (por si se generó 1 hijo extra)
+        # Recorte de excedentes
         hijos = hijos[:tam_pob]
 
-        # --- Evaluar hijos (MINIMIZACIÓN) ---
+        # Evaluación de descendencia
         costos_hijos = evaluar_poblacion(hijos, f)
 
-        # --- Reemplazo (usa costos como "aptitud" a minimizar) ---
+        # Estrategia de reemplazo (Elitismo + Sustitución de peores)
         poblacion, costos = reemplazo_peores(
             poblacion=poblacion,
             hijos=hijos,
@@ -182,7 +187,7 @@ def ejecutar_ga_real(
             elitismo=elitismo
         )
 
-        # --- Registrar métricas por generación ---
+        # Registro de métricas generacionales
         mejor = min(costos)
         promedio = sum(costos) / len(costos)
         diversidad = calcular_diversidad(poblacion)
@@ -194,7 +199,7 @@ def ejecutar_ga_real(
     t1 = time.perf_counter()
     tiempo_total = t1 - t0
 
-    # Métricas finales
+    # Estadísticas finales
     mejor_final = min(costos)
     peor_final = max(costos)
     promedio_final = sum(costos) / len(costos)
@@ -224,7 +229,7 @@ def ejecutar_ga_real(
     }
 
 # =========================================
-# 4. Experimentos múltiples + CSV
+# 4. Ejecución de Experimentos
 # =========================================
 
 def correr_experimentos(
@@ -235,14 +240,12 @@ def correr_experimentos(
     tam_pob: int = 50,
     generaciones: int = 500,
     repeticiones: int = 20,
-    modo_semillas: str = "independientes",  # "independientes" o "bloques"
+    modo_semillas: str = "independientes",
     base_semilla: int | None = None,
 ):
     """
-    Corre varias veces el AG para distintas funciones y operadores de cruza,
-    y guarda:
-      - un CSV de resumen (una fila por corrida)
-      - un CSV de curvas (una fila por generación)
+    Orquesta la ejecución de múltiples corridas experimentales.
+    Genera dos archivos CSV: uno con estadísticas finales y otro con la traza generacional completa.
     """
 
     if funciones is None:
@@ -251,7 +254,7 @@ def correr_experimentos(
     if cruzas is None:
         cruzas = ["un_punto", "uniforme", "blx", "sbx"]
 
-    # Archivo principal (resumen) y archivo de curvas
+    # Definición de nombres para archivos de salida
     nombre_curvas = nombre_archivo.replace(".csv", "_curvas.csv")
 
     with open(nombre_archivo, mode="w", newline="") as f_res, \
@@ -260,7 +263,7 @@ def correr_experimentos(
         writer_res = csv.writer(f_res)
         writer_curv = csv.writer(f_curv)
 
-        # Encabezados del CSV de RESUMEN
+        # Encabezados: Archivo de Resumen
         writer_res.writerow([
             "funcion",
             "tipo_cruza",
@@ -276,7 +279,7 @@ def correr_experimentos(
             "diversidad",
         ])
 
-        # Encabezados del CSV de CURVAS
+        # Encabezados: Archivo de Curvas
         writer_curv.writerow([
             "funcion",
             "tipo_cruza",
@@ -289,17 +292,15 @@ def correr_experimentos(
             "mejor_generacion",
             "promedio_generacion",
             "diversidad"
-
         ])
 
-        # =========================
-        #  MODO SEMILLAS INDEPENDES
-        # =========================
+        # === Ejecución con semillas independientes ===
         if modo_semillas == "independientes":
             rep_global = 0
             for nombre_func in funciones:
                 for tipo_cruza in cruzas:
                     for rep in range(repeticiones):
+                        # Semilla única derivada del índice global para evitar colisiones
                         semilla = 1000 * rep_global + 123
                         rep_global += 1
 
@@ -321,7 +322,7 @@ def correr_experimentos(
                             amplitud_mut=0.1,
                         )
 
-                        # ------- RESUMEN --------
+                        # Escritura de resumen
                         writer_res.writerow([
                             resultado["nombre_func"],
                             resultado["tipo_cruza"],
@@ -336,7 +337,7 @@ def correr_experimentos(
                             resultado["tiempo_total"],
                         ])
 
-                        # ------- CURVAS ---------
+                        # Escritura de curvas detalladas
                         curva_mejor = resultado["curva_mejor"]
                         curva_prom = resultado["curva_promedio"]
                         curva_div = resultado["curva_diversidad"]
@@ -358,9 +359,7 @@ def correr_experimentos(
                                 div_g,
                             ])
 
-        # =====================
-        #  MODO SEMILLAS BLOQUE
-        # =====================
+        # === Ejecución con semillas por bloques (secuencial) ===
         elif modo_semillas == "bloques":
             if base_semilla is None:
                 base_semilla = 42
@@ -388,8 +387,7 @@ def correr_experimentos(
                             amplitud_mut=0.1,
                         )
 
-                        # ------- RESUMEN --------
-
+                        # Escritura de resumen
                         diversidad_final = resultado["curva_diversidad"][-1]
 
                         writer_res.writerow([
@@ -407,7 +405,7 @@ def correr_experimentos(
                             diversidad_final,
                         ])
 
-                        # ------- CURVAS ---------
+                        # Escritura de curvas detalladas
                         curva_mejor = resultado["curva_mejor"]
                         curva_prom = resultado["curva_promedio"]
                         curva_diversidad = resultado["curva_diversidad"]
@@ -429,23 +427,19 @@ def correr_experimentos(
                                 div_g,
                             ])
         else:
-            raise ValueError(f"modo_semillas no reconocido: {modo_semillas}")
+            raise ValueError(f"Modo de semillas no válido: {modo_semillas}")
 
-    print(f"\n[OK] Resultados RESUMEN en: {nombre_archivo}")
-    print(f"[OK] Curvas por generación en: {nombre_curvas}")
-
+    print(f"\n[OK] Resumen guardado en: {nombre_archivo}")
+    print(f"[OK] Curvas guardadas en: {nombre_curvas}")
 
 
 # =========================================
-# 5. Punto de entrada
+# 5. Punto de Entrada (CLI)
 # =========================================
 
 if __name__ == "__main__":
-    # Parseo MUY simple de argumentos:
-    #   python main_ga.py           -> modo_semillas = "independientes"
-    #   python main_ga.py -s 42     -> modo_semillas = "bloques", base_semilla = 42
-    #   python main_ga.py --seed 10 -> igual que -s 10
-
+    # Gestión básica de argumentos para control de semillas
+    # Uso: python main_ga.py [-s SEED]
     args = sys.argv[1:]
     modo_semillas = "independientes"
     base_semilla = None
@@ -454,11 +448,11 @@ if __name__ == "__main__":
         try:
             base_semilla = int(args[1])
             modo_semillas = "bloques"
-            print(f"[INFO] Usando modo de semillas 'bloques' con base = {base_semilla}")
+            print(f"[INFO] Modo de semillas 'bloques' activo. Base: {base_semilla}")
         except ValueError:
-            print(f"[WARN] Semilla base inválida '{args[1]}', usando modo 'independientes'.")
+            print(f"[WARN] Semilla inválida '{args[1]}', revirtiendo a modo 'independientes'.")
 
-    # --- MODO EXPERIMENTOS (muchas corridas + CSV) ---
+    # Inicio de la batería de experimentos
     correr_experimentos(
         nombre_archivo="resultados_ga_sphere_rastrigin_rosenbrock.csv",
         funciones=["sphere", "rastrigin", "rosenbrock"],
@@ -470,4 +464,3 @@ if __name__ == "__main__":
         modo_semillas=modo_semillas,
         base_semilla=base_semilla,
     )
-
