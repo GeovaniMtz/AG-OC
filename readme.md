@@ -1,219 +1,240 @@
-# Comparación operadores cruza AG - optimización continua
+# Análisis Comparativo de Operadores de Cruza en Algoritmos Genéticos para Optimización Continua
 
-**Martínez Martínez Geovani — 320141384**  
+**Autor:** Martínez Martínez Geovani — 320141384
+
+**Materia:** Cómputo Evolutivo
+
+**Universidad:** UNAM — Facultad de Ciencias
+
+**Fecha:** Noviembre 2025
 
 ---
 
 ## Descripción
-En esta tarea implementamos **Evolución Diferencial (DE)** para optimización continua en **dimensión 10**.  
-Se exploran **3 variantes DE** (rand/1/bin, best/1/bin, rand/2/bin) con diferentes valores de **F** y **CR**, y se prueban en **5 funciones** de optimización.
+
+Este proyecto implementa un **Algoritmo Genético (AG)** con codificación real para comparar **4 operadores de cruza** en problemas de optimización continua. El objetivo es analizar cómo cada operador afecta la  **convergencia** ,  **calidad final** , **diversidad poblacional** y  **costo computacional** .
+
+### **Operadores de Cruza Comparados:**
+
+| Operador           | Característica                         | Parámetro  |
+| ------------------ | --------------------------------------- | ----------- |
+| **Un Punto** | Corte simple en posición aleatoria     | —          |
+| **Uniforme** | Cada gen heredado independientemente    | —          |
+| **BLX-α**   | Blend: exploración alrededor de padres | α = 0.5    |
+| **SBX**      | Simulated Binary Crossover              | η_c = 10.0 |
 
 ---
 
-## Estructura del repositorio
+## 📁 Estructura del Repositorio
+
 ```
 AG-OC/
-├─ output/
-│  └─ experimentos_de/
-│     ├─ DE_rand_1_bin_F0.5_CR0.1/
-│     ├─ DE_rand_1_bin_F0.5_CR0.5/
-│     ├─ DE_rand_1_bin_F0.5_CR0.9/
-│     ├─ ... (27 configuraciones)
-│     └─ DE_rand_2_bin_F1.0_CR0.9/
-|  └─ graficas/
-│     ├─ boxplot_ackley.png
-|     ├─ boxplot_ackley.png
-|     ├─ ...
-|     ├─ estrategias_ackley.png
-|     ├─ ...
-|     ├─ estrategias_sphere.png
-|     ├─ sensibilidad_ackley.png
-|     ├─ ...
-|     ├─ sensibilidad_sphere.png
-└─ src/
-   └─ componentes/
-      ├─ MainDE.py                    # Script principal de experimentación
-      ├─ Individuo.py                 # Representación de vectores
-      ├─ EvolucionDiferencial.py      # Las 3 variantes DE
-      ├─ ManejoLimites.py             # Manejo de restricciones
-      ├─ Funciones.py                 # 5 funciones de prueba
+├─ src/
+│  ├─ componentes/
+│  │  ├─ main_ga.py                      # Script principal (experimentos)
+│  │  ├─ funciones.py                    # Benchmarks (Sphere, Rastrigin, Rosenbrock)
+│  │  │
+│  │  ├─ cruza_un_punto.py               # Operador: Un Punto
+│  │  ├─ cruza_uniforme.py               # Operador: Uniforme
+│  │  ├─ cruza_blx.py                    # Operador: BLX-α
+│  │  ├─ cruza_sbx.py                    # Operador: SBX
+│  │  │
+│  │  ├─ seleccion_ruleta.py             # Selección por ruleta + transformación aptitud
+│  │  ├─ mutacion_real.py                # Mutación uniforme en reales
+│  │  ├─ reemplazo_peores.py             # Reemplazo generacional + elitismo
+│  │  ├─ calcular_diversidad.py          # Métrica de diversidad poblacional
+│  │  │
+│  │  ├─ graficas_convergencia.py        # Visualización: Convergencia por generación
+│  │  ├─ graficas_boxplot.py             # Visualización: Distribución final (boxplots)
+│  │  ├─ graficas_diversidad.py          # Visualización: Pérdida de diversidad
+│  │  └─ graficas_tiempo.py              # Visualización: Costo computacional
+│  │
+│  └─ README.md (este archivo)
+│
+└─ output/
+   ├─ resultados/
+   │  ├─ resultados_ga_sphere_rastrigin_rosenbrock.csv          # Resumen: una fila por ejecución
+   │  └─ resultados_ga_sphere_rastrigin_rosenbrock_curvas.csv   # Curvas: una fila por generación
+   │
+   └─ graficas/
+      ├─ convergencia_sphere.png          # Convergencia - Función Sphere
+      ├─ convergencia_rastrigin.png       # Convergencia - Función Rastrigin
+      ├─ convergencia_rosenbrock.png      # Convergencia - Función Rosenbrock
       │
-      └─ graficacion/
-         ├─ graficar_resultados.py
-         └─ graficar_boxplots.py
+      ├─ boxplot_calidad_sphere.png       # Distribución final - Sphere
+      ├─ boxplot_calidad_rastrigin.png    # Distribución final - Rastrigin
+      ├─ boxplot_calidad_rosenbrock.png   # Distribución final - Rosenbrock
+      │
+      ├─ diversidad_sphere.png            # Diversidad - Sphere
+      ├─ diversidad_rastrigin.png         # Diversidad - Rastrigin
+      ├─ diversidad_rosenbrock.png        # Diversidad - Rosenbrock
+      │
+      ├─ tiempo_sphere.png                # Costo computacional - Sphere
+      ├─ tiempo_rastrigin.png             # Costo computacional - Rastrigin
+      └─ tiempo_rosenbrock.png            # Costo computacional - Rosenbrock
 ```
 
 ---
 
-## Requisitos
-- **Python 3.x**
-- Paquetes:
-  ```bash
-  pip install numpy pandas matplotlib seaborn
-  ```
+## Inicio
 
----
+### **Requisitos**
 
-## Uso
+```bash
+Python >= 3.8
+pip install numpy pandas matplotlib seaborn scikit-learn scipy
+```
 
-### 1) Ejecutar experimentos (genera los CSV)
+### **1. Ejecutar los Experimentos**
 
-Ejecuta `MainDE.py` **desde `src/componentes/`**.
-
-#### **Opciones de ejecución:**
-
-**a) Experimentación completa (5 funciones, 1,350 ejecuciones):**
 ```bash
 cd src/componentes
-python MainDE.py -c --ejecuciones 10
+python main_ga.py
 ```
 
-**b) Funciones específicas:**
-```bash
-# Terminal 1
-python MainDE.py sphere ackley griewank --ejecuciones 10
-
-# Terminal 2
-python MainDE.py rastrigin rosenbrock --ejecuciones 10
-```
-
-**c) Con semilla fija (reproducibilidad):**
-```bash
-# Una persona:
-python MainDE.py -c --ejecuciones 10 --semilla 42
-
-# Dividido:
-python MainDE.py sphere ackley griewank --ejecuciones 10 --semilla 42
-python MainDE.py rastrigin rosenbrock --ejecuciones 10 --semilla 42
-```
-
-**Parámetros:**
-- `--ejecuciones N`: Número de repeticiones por configuración (default: 10, mínimo: 10)
-- `--semilla N`: Semilla base para reproducibilidad (default: generada automáticamente)
-- `-c`: Flag para experimentación completa (todas las funciones)
-- Funciones válidas: `sphere`, `ackley`, `griewank`, `rastrigin`, `rosenbrock`
-
----
-
-### 2) Qué se genera
-
-Por cada configuración (variante + F + CR) y función, se generan:
-
-**a) Curvas de evolución individuales:**
-```
-curva_<funcion>_<variante>_F<valor>_CR<valor>_sem<semilla>.csv
-```
-Columnas: `generacion, mejor, promedio, peor`
-
-**b) Resúmenes individuales:**
-```
-resumen_<funcion>_<variante>_F<valor>_CR<valor>_sem<semilla>.csv
-```
-Columnas: `funcion, variante, F, CR, poblacion, dimension, max_evals, semilla, mejor, promedio, mediana, peor, std`
-
-**c) Resúmenes consolidados (múltiples repeticiones):**
-```
-multi_<funcion>_<variante>_F<valor>_CR<valor>.csv
-```
-Columnas: `semilla, mejor, promedio, mediana, peor, std`
-
-**Ubicación:** `output/experimentos_de/<configuracion>/`
-
----
-
-### 3) Analizar resultados (gráficas y tablas)
+**Opciones (incluidas en main_ga.py):**
 
 ```bash
-# Ejecutar desde la raíz del repositorio (Syrion6/)
-python src/graficacion/graficar_resultados.py
-python src/graficacion/graficar_boxplots.py
+# Modo: Semillas independientes (default)
+python main_ga.py
+
+# Modo: Semillas por bloques (para reproducibilidad exacta)
+python main_ga.py -s 42
+python main_ga.py --seed 42
+```
+
+**Parámetros (configurables en `main_ga.py` línea final):**
+
+* `funciones`: Lista de funciones a optimizar
+* `cruzas`: Operadores a comparar
+* `dim`: Dimensión del problema (default: 10)
+* `tam_pob`: Tamaño de población (default: 100)
+* `generaciones`: Máximo de generaciones (default: 1000)
+* `repeticiones`: Corridas por configuración (default: 30)
+
+### **2. Generar Gráficas**
+
+```bash
+# Convergencia
+python graficas_convergencia.py
+
+# Boxplots (Distribución final)
+python graficas_boxplot.py
+
+# Diversidad poblacional
+python graficas_diversidad.py
+
+# Costo computacional
+python graficas_tiempo.py
 ```
 
 ---
 
-## Configuración experimental
+## Configuración Experimental
 
-### **Parámetros fijos:**
-- Dimensión: **D = 10**
-- Población: **Npob = 100**
-- Evaluaciones máximas: **300,000**
-- Generaciones: **3,000** (300,000 / 100)
-- Método de límites: **Saturación**
+### **Parámetros Fijos (AG):**
 
-### **Parámetros variables:**
-- **Variantes:** 3 (DE/rand/1/bin, DE/best/1/bin, DE/rand/2/bin)
-- **Factor F:** 3 valores (0.5, 0.75, 1.0)
-- **Tasa CR:** 3 valores (0.1, 0.5, 0.9)
-- **Total configuraciones:** 3 × 3 × 3 = **27**
+| Parámetro                    | Valor               | Justificación                    |
+| ----------------------------- | ------------------- | --------------------------------- |
+| **Dimensión**          | 10                  | Estándar, manejable              |
+| **Población**          | 100                 | Balance exploración/explotación |
+| **Generaciones**        | 1,000               | Convergencia suficiente           |
+| **Prob. Cruza**         | 0.9                 | Estándar en literatura           |
+| **Prob. Mutación/Gen** | 1/dim ≈ 0.1        | Heurística común                |
+| **Amplitud Mutación**  | 0.1 × rango        | 10% del dominio                   |
+| **Elitismo**            | 1                   | Preserva al mejor                 |
+| **Reemplazo**           | 100% (Generacional) | Presión selectiva moderada       |
 
-### **Funciones de prueba:**
+### **Funciones de Prueba:**
 
-| Función | Límites | Óptimo | Características |
-|---------|---------|--------|-----------------|
-| Sphere | [-100, 100] | 0.0 | Unimodal, convexa |
-| Ackley | [-32, 32] | 0.0 | Multimodal |
-| Griewank | [-600, 600] | 0.0 | Multimodal |
-| Rastrigin | [-5.12, 5.12] | 0.0 | Altamente multimodal |
-| Rosenbrock | [-5, 10] | 0.0 | Valle estrecho |
+| Función             | Dominio         | Óptimo      | Características                  |
+| -------------------- | --------------- | ------------ | --------------------------------- |
+| **Sphere**     | [-5.12, 5.12]   | 0.0          | Unimodal, convexa, suave          |
+| **Rastrigin**  | [-5.12, 5.12]   | 0.0          | Altamente multimodal, oscilatoria |
+| **Rosenbrock** | [-2.048, 2.048] | 0.0 (en x=1) | Valle estrecho, asimétrica       |
 
----
+### **Repeticiones y Reproducibilidad:**
 
-## Implementación
-
-### **Variantes DE implementadas:**
-
-#### **1. DE/rand/1/bin (Clásica - Ejercicio 1.a)**
-```
-v_i = x_r1 + F * (x_r2 - x_r3)
-```
-- Balance entre exploración y explotación
-- Vector base aleatorio
-
-#### **2. DE/best/1/bin (Geovani - Ejercicio 1.c)**
-```
-v_i = x_best + F * (x_r2 - x_r3)
-```
-- Variante explotadora
-- Convergencia más rápida
-- Usa el mejor individuo como base
-
-#### **3. DE/rand/2/bin (Osdan - Ejercicio 1.c)**
-```
-v_i = x_r1 + F * (x_r2 - x_r3) + F * (x_r4 - x_r5)
-```
-- Variante exploradora
-- Mayor diversidad
-- Requiere mínimo 6 individuos
-
-### **Manejo de límites (Ejercicio 1.b):**
-- **Saturación (Clamping):** Método principal utilizado
-- Rebote (Reflection)
-- Reinicio aleatorio
+* **30 repeticiones** por (función, operador) pair
+* **Semillas fijas** : 1000 × índice + 123
+* **CSV generados** : Contienen TODAS las métricas para el análisis
 
 ---
 
-## Notas importantes
+## Resultados Esperados
 
-- **Semillas:** Si no se especifica `--semilla`, se genera automáticamente con `secrets.randbits(32)`
-- **Reproducibilidad:** Usar la misma semilla base garantiza resultados idénticos
-- **División de trabajo:** Ambas personas deben usar la misma semilla para resultados consistentes
-- **Tiempo estimado:** ~6-7 segundos por ejecución en hardware moderno
-- **Archivos generados:** Cada configuración genera archivos por función (no hay conflictos al dividir)
+### **Archivos Generados**
+
+**Archivo de Resumen** (`resultados_ga_*.csv`):
+
+* Una fila por ejecución
+* Columnas: función, operador, métricas finales, tiempo
+
+**Archivo de Curvas** (`resultados_ga_*_curvas.csv`):
+
+* Una fila por generación
+* Columnas: función, operador, generación, mejor, promedio, diversidad
+
+### **Gráficas Generadas**
+
+| Gráfica               | Pregunta                        | Insight                           |
+| ---------------------- | ------------------------------- | --------------------------------- |
+| **Convergencia** | ¿Quién converge más rápido? | Velocidad de búsqueda            |
+| **Boxplot**      | ¿Quién es más confiable?     | Robustez y calidad final          |
+| **Diversidad**   | ¿Quién mantiene exploración? | Balance exploración/explotación |
+| **Tiempo**       | ¿Quién es más eficiente?     | Costo computacional               |
 
 ---
 
-## Estructura de resultados
+## Métricas Utilizadas
+
+### **1. Velocidad de Convergencia**
 
 ```
-output/experimentos_de/
-├─ DE_rand_1_bin_F0.5_CR0.1/
-│  ├─ curva_sphere_DE_rand_1_bin_F0.5_CR0.1_sem42.csv
-│  ├─ curva_sphere_DE_rand_1_bin_F0.5_CR0.1_sem43.csv
-│  ├─ ...
-│  ├─ resumen_sphere_DE_rand_1_bin_F0.5_CR0.1_sem42.csv
-│  ├─ ...
-│  └─ multi_sphere_DE_rand_1_bin_F0.5_CR0.1.csv
-│
-├─ DE_rand_1_bin_F0.5_CR0.5/
-└─ ... (27 configuraciones en total)
+Métrica: mejor_generacion (mejor valor encontrado hasta gen G)
+Visualización: Curva log de convergencia
 ```
+
+### **2. Calidad Final**
+
+```
+Métricas:
+  - mejor_final: Mejor solución alcanzada
+  - promedio_final: Promedio poblacional final
+  - peor_final: Peor solución final
+Visualización: Boxplot con escala logarítmica
+```
+
+### **3. Diversidad Poblacional**
+
+```
+Métrica: Desv. Estándar promediada por dimensión
+Fórmula: avg(std(población[:, i])) para i en dimensiones
+Interpretación:
+  - Alta: Población esparcida, buena exploración
+  - Baja: Población convergida, posible estancamiento
+Visualización: Curva log por generación
+```
+
+### **4. Robustez**
+
+```
+Base: 30 repeticiones con semillas diferentes
+Análisis: Mediana, cuartiles, desviación estándar
+```
+
+### **5. Eficiencia Computacional**
+
+```
+Métrica: Tiempo total de ejecución (segundos)
+Incluye: Evaluaciones, selección, cruza, mutación, reemplazo
+Visualización: Barras agrupadas por función
+```
+
+---
+
+## Referencias
+
+* Deb, K., & Agrawal, R. (1995).  *Simulated binary crossover for continuous search space* . Complex Systems, 9(3), 1-15.
+* Eiben, A. E., & Smith, J. E. (2003).  *Introduction to evolutionary computing* . Springer.
+* Goldberg, D. E. (1989).  *Genetic algorithms in search, optimization, and machine learning* . Addison-Wesley.
